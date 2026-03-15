@@ -1,10 +1,16 @@
+import argparse
 import base64
 import math
 import random
-import sys
+import subprocess
 import time
 
 import decode
+
+parser = argparse.ArgumentParser(prog="Hexate",description="Flipdot Distance Field Renderer")
+parser.add_argument('-v', '--verbose', action='store_true')
+
+args = parser.parse_args()
 
 def add(a, b):
   (xa, ya) = a
@@ -49,9 +55,9 @@ def orbit1(x, y, t, pos):
     k)
 
 def orbit2(x, y, t, pos):
-  k = 0.1
-  dist = 4.0 * (2.0 + t)
-  ang = 10.0 * t / (2.0 * math.pi)
+  k = 3.0
+  dist = 4.0 * (20.0 + t)
+  ang = 9.0 * t / (2.0 * math.pi)
   return smin(
     circle(x, y, add(pos, muls((math.cos(ang), math.sin(ang)), dist)), 0),
     circle(x, y, sub(pos, muls((math.cos(ang), math.sin(ang)), dist)), 0),
@@ -85,7 +91,29 @@ def frame(t):
   
   return encode(grid)
 
-for t in range(360):
+def mosquitto(*args):
+  subprocess.run(['mosquitto_pub'] + list(args))
+
+def set_buffer(index):
+  mosquitto('-t', 'nh/flipdot/comfy/buffer', '-m', str(index))
+
+def send_raw(message):
+  mosquitto('-t', 'nh/flipdot/comfy/raw', '-m', message)
+
+def send_text(message):
+  mosquitto('-t', 'nh/flipdot/comfy/text', '-m', message)
+
+set_buffer(6)
+
+for t in range(120):
   f = frame(0.1 * t)
-  decode.output(f)
-  time.sleep(0.1)
+  send_raw(f)
+  if args.verbose:
+    decode.output(f)
+  time.sleep(0.5)
+
+send_text("ORBIT DECAYED!")
+
+time.sleep(10)
+set_buffer(0)
+
