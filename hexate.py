@@ -2,6 +2,7 @@ import base64
 import math
 import random
 import sys
+import time
 
 import decode
 
@@ -31,29 +32,34 @@ def length(a):
 def mix(x, y, a):
   return x * (1.0 - a) + y * a
 
-"""
 def smin(a, b, k):
   h = max(0.0, min(1.0, 0.5 + 0.5 * (b - a) / k))
-  return self.mix(b, a, h) - k * h * (1.0 - h)
-"""
+  return mix(b, a, h) - k * h * (1.0 - h)
 
 def circle(x, y, pos, rad):
   return length(sub(pos, (x, y))) - rad
 
-"""
-def orbit(self, pos):
-  const float k = 0.1;
-  const vec2 pos = vec2(0.75, 0.5);
-  float dist = 0.1 * (2.0 + sin(iTime));
-  float ang = iTime / (2.0 * PI);
+def orbit1(x, y, t, pos):
+  k = 0.1
+  dist = 4.0 * (2.0 + t)
+  ang = 10.0 * t / (2.0 * math.pi)
   return smin(
-      circle(uv - pos, 0.0),
-      circle(uv - pos - dist * vec2(cos(ang), sin(ang)), 0.0),
-      k);
-"""
+    circle(x, y, pos, 0.0),
+    circle(x, y, sub(pos, muls((math.cos(ang), math.sin(ang)), dist)), 0),
+    k)
 
-def dist(x, y):
-  d = circle(x, y, (42.5, 3.5), 0.0)   # Point in the centre of the display
+def orbit2(x, y, t, pos):
+  k = 0.1
+  dist = 4.0 * (2.0 + t)
+  ang = 10.0 * t / (2.0 * math.pi)
+  return smin(
+    circle(x, y, add(pos, muls((math.cos(ang), math.sin(ang)), dist)), 0),
+    circle(x, y, sub(pos, muls((math.cos(ang), math.sin(ang)), dist)), 0),
+    k)
+
+def dist(x, y, t):
+  #d = circle(x, y, (42.5, 3.5), 0.0)   # Point in the centre of the display
+  d = orbit2(x, y, t, (41.5, 3.5))
   return 0 if math.modf(d * 0.1)[0] <= 0.5 else 1
 
 def encode(grid):
@@ -68,13 +74,18 @@ def encode(grid):
     buffer.append(value)
   return base64.b64encode(bytearray(buffer))
 
-grid = []
+def frame(t):
+  grid = []
+  
+  for y in range(8):
+    row = []
+    for x in range(84):
+      row.append(dist(x, y, t))
+    grid.append(row)
+  
+  return encode(grid)
 
-for y in range(8):
-  row = []
-  for x in range(84):
-    row.append(dist(x, y))
-  grid.append(row)
-
-decode.output(encode(grid))
-
+for t in range(360):
+  f = frame(0.1 * t)
+  decode.output(f)
+  time.sleep(0.1)
