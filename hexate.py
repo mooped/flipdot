@@ -1,6 +1,7 @@
 import argparse
 import base64
 import math
+import paho.mqtt.client as mqtt
 import random
 import subprocess
 import time
@@ -78,7 +79,7 @@ def encode(grid):
       value += bit * bv
       bv = bv << 1
     buffer.append(value)
-  return base64.b64encode(bytearray(buffer))
+  return bytearray(buffer)
 
 def frame(t):
   grid = []
@@ -91,17 +92,18 @@ def frame(t):
   
   return encode(grid)
 
-def mosquitto(*args):
-  subprocess.run(['mosquitto_pub'] + list(args))
+mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+mqttc.connect('localhost')
+mqttc.loop_start()
 
 def set_buffer(index):
-  mosquitto('-t', 'nh/flipdot/comfy/buffer', '-m', str(index))
+  mqttc.publish('nh/flipdot/comfy/buffer', index)
 
 def send_raw(message):
-  mosquitto('-t', 'nh/flipdot/comfy/raw', '-m', message)
+  mqttc.publish('nh/flipdot/comfy/raw', message)
 
 def send_text(message):
-  mosquitto('-t', 'nh/flipdot/comfy/text', '-m', message)
+  mqttc.publish('nh/flipdot/comfy/text', message)
 
 set_buffer(6)
 
@@ -116,4 +118,6 @@ send_text("ORBIT DECAYED!")
 
 time.sleep(10)
 set_buffer(0)
+
+mqttc.loop_stop()
 

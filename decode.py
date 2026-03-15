@@ -9,7 +9,7 @@ def output(buffer):
   try:
     image = base64.b64decode(buffer, validate=True)
   except binascii.Error:
-    image = list(map(lambda x: ord(x), buffer.decode(encoding='utf-8')))
+    image = buffer
   image = list(map(lambda x: [c for c in "{0:8b}".format(x)], image))
   image = zip(*image)
 
