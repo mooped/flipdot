@@ -78,6 +78,7 @@ transform = [ [  1.0000000,  0.0000000,  0.0000000  ],
 def orbit(period, distance, t):
   ang = t * 2.0 * math.pi
   return mulmv(transform, muls((math.cos(ang / period), 0.0, math.sin(ang / period)), distance))
+  #return muls((math.cos(ang / period), 0.0, math.sin(ang / period)), distance)
 
 def orreray(ray, t, pos):
   planets = [
@@ -92,11 +93,26 @@ def orreray(ray, t, pos):
     (add(pos, orbit(60190.0, 4495100000, t)), 24622.0),
   ]
   nearest = None
+  result = 0
   for (p, r) in planets:
     hit = raysphere(ray, p, r * 2000.0)
     if hit:
-      return 1
-  return 0
+      dist, intersection = hit
+      if not nearest or dist < nearest:
+        nearest = dist
+        if pos == p:
+          # The sun is always lit
+          result = 1
+        else:
+          # Normal is along the vector from sphere centre to intersection
+          normal = normalize(sub(p, intersection))
+          sundir = normalize(sub(p, pos))
+          # Lit if normal is pointing at the sun, otherwise unlit
+          if dot(normal, sundir) > 0.0:
+            result = 1
+          else:
+            result = 0
+  return result 
 
 # Precompute ray directions (because why not)
 # Put the centre of the screen 20 units from the camera down z
@@ -147,20 +163,21 @@ def send_raw(message):
 def send_text(message):
   mqttc.publish('nh/flipdot/comfy/text', message)
 
-#set_buffer(6)
+try:
+  set_buffer(6)
 
-offset = random.random() * 60190.0
-for t in range(365):
-  f = frame(t + offset)
-  #send_raw(f)
-  if args.verbose:
-    decode.output(f)
-  #time.sleep(0.5)
-
-#send_text("CONTAINMENT!")
-
-#time.sleep(10)
-#set_buffer(0)
-
-mqttc.loop_stop()
-
+  offset = random.random() * 60190.0
+  for t in range(365):
+    f = frame(t + offset)
+    send_raw(f)
+    if args.verbose:
+      decode.output(f)
+    time.sleep(0.5)
+  
+finally:
+  send_text("CONTAINMENT!")
+  time.sleep(10)
+  set_buffer(0)
+  
+  mqttc.loop_stop()
+  
