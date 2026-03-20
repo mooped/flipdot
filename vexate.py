@@ -149,8 +149,9 @@ def send_text(message):
 
 #set_buffer(6)
 
+offset = random.random() * 60190.0
 for t in range(365):
-  f = frame(t)
+  f = frame(t + offset)
   #send_raw(f)
   if args.verbose:
     decode.output(f)
