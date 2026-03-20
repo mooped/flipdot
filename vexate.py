@@ -29,6 +29,11 @@ def mul(a, b):
 def muls(a, b):
   return nary(lambda x: x * b, a)
 
+def mulmv(a, b):
+  return nary(lambda a, b: sum(mul(a, b)), a, (b, b, b))
+
+#def mulmm(a, b):
+
 def divs(a, b):
   return nary(lambda x: x / b, a)
 
@@ -51,38 +56,6 @@ def smin(a, b, k):
   h = max(0.0, min(1.0, 0.5 + 0.5 * (b - a) / k))
   return mix(b, a, h) - k * h * (1.0 - h)
 
-def sphere(x, y, z, pos, rad):
-  return length(sub(pos, (x, y, z))) - rad
-
-def orbit2(x, y, z, t, pos):
-  k = 3.0
-  dist = 4.0 * (20.0 + t)
-  ang = 9.0 * t / (2.0 * math.pi)
-  return smin(
-    sphere(x, y, z, add(pos, muls((math.cos(ang), math.sin(ang), 0.0), dist)), 10),
-    sphere(x, y, z, sub(pos, muls((math.cos(ang), math.sin(ang), 0.0), dist)), 20),
-    k)
-
-def orrerey(x, y, z, t, pos):
-  ang = 100000.0 + 900.0 * t
-  return min(
-    sphere(x, y, z, pos, 1391400.0),
-    sphere(x, y, z, add(pos, muls((math.cos(ang / 88.0), 0.0, math.sin(ang / 88.0)), 57900000)), 4879.0),
-    sphere(x, y, z, add(pos, muls((math.cos(ang / 225.0), 0.0, math.sin(ang / 225.0)), 108200000)), 12104.0),
-    sphere(x, y, z, add(pos, muls((math.cos(ang / 365.0), 0.0, math.sin(ang / 365.0)), 149600000)), 12756.0),
-    sphere(x, y, z, add(pos, muls((math.cos(ang / 687.0), 0.0, math.sin(ang / 687.0)), 227900000)), 6792.0),
-    sphere(x, y, z, add(pos, muls((math.cos(ang / 4333.0), 0.0, math.sin(ang / 4333.0)), 778600000)), 142984.0),
-    sphere(x, y, z, add(pos, muls((math.cos(ang / 10759.0), 0.0, math.sin(ang / 10759.0)), 1433500000)), 120536.0),
-    sphere(x, y, z, add(pos, muls((math.cos(ang / 30687.0), 0.0, math.sin(ang / 30687.0)), 2872500000)), 51118.0),
-    sphere(x, y, z, add(pos, muls((math.cos(ang / 60190.0), 0.0, math.sin(ang / 60190.0)), 4495100000)), 49528.0),
-  )
-
-def dist(x, y, z, t):
-  #d = sphere(x, y, z, (0, 0, 40), 15.0)   # Sphere in the centre of the display
-  #d = orbit2(x, y, z, t, (0.0, 0.0, 40.0))
-  d = orrerey(x, y, z, t, (0.0, 0.0, 2380000000.0))
-  return d#0 if math.modf(d * 0.1)[0] <= 0.5 else 1
-
 # Distance along ray until intersection with a sphere
 def raysphere(ray, pos, radius):
   # Project ray onto pos, assume ray is already normalised
@@ -98,18 +71,25 @@ def raysphere(ray, pos, radius):
     return math.sqrt(distsq), intersection
   return None
 
-def orreray(ray, t, pos):
+transform = [ [  1.0000000,  0.0000000,  0.0000000  ],
+              [  0.0000000,  0.8191521, -0.5735765  ],
+              [  0.0000000,  0.5735765,  0.8191521  ], ]
+
+def orbit(period, distance, t):
   ang = t * 2.0 * math.pi
+  return mulmv(transform, muls((math.cos(ang / period), 0.0, math.sin(ang / period)), distance))
+
+def orreray(ray, t, pos):
   planets = [
     (pos, 695700.0 / 40.0),
-    (add(pos, muls((math.cos(ang / 88.0), math.sin(ang / 88.0), 0.0), 57900000)), 2440.0),
-    (add(pos, muls((math.cos(ang / 225.0), math.sin(ang / 225.0), 0.0), 108200000)), 6052.0),
-    (add(pos, muls((math.cos(ang / 365.0), math.sin(ang / 365.0), 0.0), 149600000)), 6371.0),
-    (add(pos, muls((math.cos(ang / 687.0), math.sin(ang / 687.0), 0.0), 227900000)), 3390.0),
-    (add(pos, muls((math.cos(ang / 4333.0), math.sin(ang / 4333.0), 0.0), 778600000)), 69911.0),
-    (add(pos, muls((math.cos(ang / 10759.0), math.sin(ang / 10759.0), 0.0), 1433500000)), 58232.0),
-    (add(pos, muls((math.cos(ang / 30687.0), math.sin(ang / 30687.0), 0.0), 2872500000)), 25362.0),
-    (add(pos, muls((math.cos(ang / 60190.0), math.sin(ang / 60190.0), 0.0), 4495100000)), 24622.0),
+    (add(pos, orbit(88, 57900000, t)), 2440.0),
+    (add(pos, orbit(255.0, 108200000, t)), 6052.0),
+    (add(pos, orbit(365.0, 149600000, t)), 6371.0),
+    (add(pos, orbit(687.0, 227900000, t)), 3390.0),
+    (add(pos, orbit(4333.0, 778600000, t)), 69911.0),
+    (add(pos, orbit(10759.0, 1433500000, t)), 58232.0),
+    (add(pos, orbit(30687.0, 2872500000, t)), 25362.0),
+    (add(pos, orbit(60190.0, 4495100000, t)), 24622.0),
   ]
   nearest = None
   for (p, r) in planets:
@@ -127,21 +107,9 @@ for y in range(8):
     row.append(normalize((x - 41.5, y - 3.5, 20.0)))
   rays.append(row)
 
-def raycastdf(x, y, t):
-  ray = rays[y][x]
-                                # Start tracing at the screen to ignore anything behind it
-  c = add(muls(ray, 20.0), (0.0, 0.0, 5.0 * t))
-  d = 0.0
-  for step in range(50):        # Trace 25 steps before giving up
-    d = dist(c[0], c[1], c[2], t)
-    c = add(c, muls(ray, d))    # March along the ray by the last distance
-    if d < 100000000.0:         # Hit (close enough)
-      return 1
-  return 0                      # Miss
-
 def raycast(x, y, t):
   ray = rays[y][x]
-  return orreray(ray, t, (0.0, 0.0, 238000000.0))#2380000000.0))
+  return orreray(ray, t, (0.0, 0.0, 238000000.0))
 
 def encode(grid):
   buffer = []
