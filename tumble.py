@@ -4,6 +4,7 @@ import math
 import paho.mqtt.client as mqtt
 import random
 import subprocess
+import sys
 import time
 
 import decode
@@ -37,9 +38,14 @@ def send_raw(message):
 def send_text(message):
   mqttc.publish('nh/flipdot/comfy/text', message)
 
-while not message:
-    time.sleep(0.5)
-    print("...")
+for i in range(600):
+  if message:
+    break
+  time.sleep(0.5)
+  print("...")
+
+if not message:
+  sys.exit(0)
 
 time.sleep(1)
 
