@@ -59,7 +59,8 @@ grid.reverse()
 
 def encode(grid):
   buffer = []
-  g = zip(*grid)
+  g = list(zip(*grid))
+  g.reverse()
   for col in g:
     value = 0
     bv = 1
