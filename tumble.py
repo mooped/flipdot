@@ -16,17 +16,23 @@ parser.add_argument('-v', '--verbose', action='store_true')
 args = parser.parse_args()
 
 message = None
+buffer = 0
 
 def on_message(client, userdata, msg):
+    global buffer
     global message
     print(msg.topic + " " + str(msg.payload))
-    message = msg.payload.decode()
+    if buffer == 0 and msg.topic == 'nh/flipdot/comfy/text':
+        message = msg.payload.decode()
+    elif msg.topic == 'nh/flipdot/comfy/buffer':
+        buffer = int(msg.payload.decode())
 
 mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 mqttc.on_message = on_message
 mqttc.connect('localhost')
 mqttc.loop_start()
 
+mqttc.subscribe('nh/flipdot/comfy/buffer')
 mqttc.subscribe('nh/flipdot/comfy/text')
 
 def set_buffer(index):
@@ -43,6 +49,9 @@ for i in range(600):
     break
   time.sleep(0.5)
   print("...")
+
+mqttc.unsubscribe('nh/flipdot/comfy/buffer')
+mqttc.unsubscribe('nh/flipdot/comfy/text')
 
 if not message:
   sys.exit(0)
@@ -85,6 +94,7 @@ send_text("OOPS!")
 
 time.sleep(10)
 set_buffer(0)
+send_text(message)
 
 mqttc.loop_stop()
 
